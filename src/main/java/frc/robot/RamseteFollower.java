@@ -13,13 +13,16 @@ import frc.robot.WheelCommand;
 public class RamseteFollower{
 
     TalonSRX left, right;
-    double k_1, k_2, k_3, v, w, theta, x, y, v_d, w_d, theta_d, x_d, y_d;
+    double k_1, k_2, k_3, v, w, v_d, w_d, theta_d, x_d, y_d;
     double wheelBase;
     AnalogGyro gyro;
     Trajectory path;
 
+    volatile double x, y, theta;
+
     static final double b = 0;
     static final double zeta = 0;
+    static final double wheelDiameter = 4;
 
     int index, numSegments;
     //where v = linear velocity (feet/s) and w = angular velocity (rad/s)
@@ -31,7 +34,7 @@ public class RamseteFollower{
         k_2 = b;
         index = 0;
         numSegments = path.length()-1;
-        
+        startOdometry();
     }
 
     public WheelCommand getNextWheelCommand(){
@@ -41,8 +44,9 @@ public class RamseteFollower{
             return new WheelCommand(left, right);
         }
         Segment current = path.get(index);
-        calcVel(current.x, current.y, gyro.getAngle(), current.velocity, Math.toRadians(current.heading)/current.dt);
-        calcAngleVel(current.x, current.y, gyro.getAngle(), current.velocity, Math.toRadians(current.heading)/current.dt);
+        calcVel(current.x, current.y, Math.toRadians(current.heading), current.velocity, Math.toRadians(current.heading)/current.dt);
+        calcAngleVel(current.x, current.y, Math.toRadians(current.heading), current.velocity, Math.toRadians(current.heading)/current.dt);
+
 
         left = (-wheelBase*w)/2 + v;
         right = (+wheelBase*w)/2 + v;
@@ -65,6 +69,20 @@ public class RamseteFollower{
     public void calcK(double v_d, double w_d){
         k_1 = 2 * zeta * Math.sqrt(Math.pow(w_d,2)+ k_2*Math.pow(v_d, 2));
         k_3 = k_1;
+    }
+
+    public void startOdometry(){
+        new Thread (()->{
+                while(true){
+                    x += Math.cos(Math.toRadians(gyro.getAngle())) * talonNativeToFPS(((left.getSelectedSensorVelocity(0) + right.getSelectedSensorVelocity(0)) / 2));
+                    y += Math.sin(Math.toRadians(gyro.getAngle())) * talonNativeToFPS(((left.getSelectedSensorVelocity(0) + right.getSelectedSensorVelocity(0)) / 2));
+                    theta = Math.toRadians(gyro.getAngle());
+                }
+        }).start();
+    }
+
+    public double talonNativeToFPS(double something){
+        return (Math.PI * 10 * wheelDiameter * something) / (4 * 128);
     }
 
     public boolean isFinished(){
