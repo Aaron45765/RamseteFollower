@@ -63,7 +63,7 @@ public class RamseteFollower{
     }
 
     public void calcK(double v_d, double w_d){
-        k_1 = 2 * zeta * Math.sqrt(Math.pow(w_d,2)+ Math.pow(v_d, 2));
+        k_1 = 2 * zeta * Math.sqrt(Math.pow(w_d,2)+ k_2*Math.pow(v_d, 2));
         k_3 = k_1;
     }
 
